@@ -3,8 +3,16 @@
   "name": "Malware Scanner",
   "version": "1.0",
   "description": "Detects Emotet, SocGholish, and IcedID malware",
-  "permissions": ["declarativeNetRequest", "storage", "activeTab"],
-  "host_permissions": ["<all_urls>"],
+  "permissions": [
+    "declarativeNetRequest",
+    "storage",
+    "activeTab",
+    "downloads",
+    "notifications"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
   "background": {
     "service_worker": "background.js"
   },
