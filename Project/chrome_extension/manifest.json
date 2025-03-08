@@ -6,7 +6,8 @@
   "permissions": [
     "downloads",
     "notifications",
-    "scripting"
+    "scripting",
+    "activeTab"
   ],
   "host_permissions": ["http://localhost:5000/*"],
   "background": {

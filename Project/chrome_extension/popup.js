@@ -28,7 +28,8 @@ document.getElementById("scan").addEventListener("click", async function () {
       body: formData,
     });
     
-    const data = await response.json();
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
     
     // YARA 룰과 연동되어 악성이 감지될 때만 alert 발생, 아니면 안전함을 알림
     if (data.result === "malicious") {
@@ -71,7 +72,10 @@ dropZone.addEventListener("drop", async (e) => {
       method: "POST",
       body: formData,
     });
-    const data = await response.json();
+
+    const text = await response.text();
+    const data = text ? JSON.parse(text) : {};
+    
     if (data.result === "malicious") {
       alert(`경고: ${file.name} 에서 악성 코드 감지됨!\n룰: ${data.matches.join(", ")}`);
     } else {
