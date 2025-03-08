@@ -3,6 +3,7 @@
 import datetime
 import os
 import socket
+import json
 
 import yara
 from flask import Flask, jsonify, request
@@ -55,6 +56,30 @@ def scan_file():
         send_to_c2(alert_message)
 
     return jsonify(result)
+
+@app.route('/scan-page', methods=['POST'])
+def scan_page():
+    url = request.form.get('url')
+    html = request.form.get('html')
+    scripts = json.loads(request.form.get('scripts'))
+
+    # YARA 규칙으로 HTML 콘텐츠 검사
+    matches = rules.match(data=html)
+    
+    # 악성 스크립트 URL 패턴 검사
+    suspicious_patterns = [
+        'suspicious-domain.com',
+        'malware-site.com',
+        '.ru/',  # 예시 패턴
+    ]
+    
+    is_suspicious = any(pattern in url for pattern in suspicious_patterns)
+    is_malicious = len(matches) > 0 or is_suspicious
+
+    return jsonify({
+        'result': 'malicious' if is_malicious else 'clean',
+        'matches': [str(match) for match in matches] if matches else []
+    })
 
 if __name__ == "__main__":
     # Flask 서버 실행 (127.0.0.1:5000)
