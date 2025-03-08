@@ -42,3 +42,43 @@ document.getElementById("scan").addEventListener("click", async function () {
     alert("스캔 중 오류가 발생했습니다.");
   }
 });
+
+// 파일 드래그 앤 드랍 이벤트 추가
+const dropZone = document.getElementById("drop-zone");
+
+dropZone.addEventListener("dragover", (e) => {
+  e.preventDefault();
+  dropZone.style.backgroundColor = "#eef";
+});
+
+dropZone.addEventListener("dragleave", (e) => {
+  e.preventDefault();
+  dropZone.style.backgroundColor = "";
+});
+
+dropZone.addEventListener("drop", async (e) => {
+  e.preventDefault();
+  dropZone.style.backgroundColor = "";
+  const files = e.dataTransfer.files;
+  if (!files.length) return alert("파일이 감지되지 않았습니다.");
+  
+  const file = files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+  
+  try {
+    const response = await fetch("http://localhost:5000/scan", {
+      method: "POST",
+      body: formData,
+    });
+    const data = await response.json();
+    if (data.result === "malicious") {
+      alert(`경고: ${file.name} 에서 악성 코드 감지됨!\n룰: ${data.matches.join(", ")}`);
+    } else {
+      alert(`${file.name} 은(는) 안전합니다.`);
+    }
+  } catch (err) {
+    console.error("파일 스캔 오류:", err);
+    alert("파일 스캔 중 오류가 발생했습니다.");
+  }
+});

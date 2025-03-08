@@ -4,6 +4,7 @@ import datetime
 import os
 import socket
 import json
+import threading, time, os
 
 import yara
 from flask import Flask, jsonify, request
@@ -81,6 +82,12 @@ def scan_page():
         'matches': [str(match) for match in matches] if matches else []
     })
 
+def auto_shutdown(delay=120):
+    time.sleep(delay)
+    print("자동 종료: 서버가 종료됩니다.")
+    os._exit(0)
+
 if __name__ == "__main__":
-    # Flask 서버 실행 (127.0.0.1:5000)
+    # 타이머 스레드를 시작하여 120초 후 서버를 종료함
+    threading.Thread(target=auto_shutdown, daemon=True).start()
     app.run(host="127.0.0.1", port=5000, debug=True)
