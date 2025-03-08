@@ -3,10 +3,28 @@
   "name": "YARA Malware Detector",
   "version": "1.0",
   "description": "다운로드한 파일을 YARA 룰로 검사하는 Chrome 확장 프로그램",
-  "permissions": ["downloads", "notifications"],
+  "permissions": [
+    "downloads",
+    "notifications",
+    "scripting"
+  ],
   "host_permissions": ["http://localhost:5000/*"],
   "background": {
     "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["contentscript.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icons/alert.png",
+      "128": "icons/vaccine.png"
+    }
   },
   "icons": {
     "48": "icons/alert.png",
