@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Malware Scanner</title>
     <script src="popup.js" defer></script>
+    <style>
+      body {
+        min-width: 500px;
+      }
+    </style>
   </head>
   <body>
     <h2>Malware Scanner</h2>
@@ -13,6 +18,10 @@
     <!-- 파일 드래그 앤 드랍 영역 추가 -->
     <div id="drop-zone" style="border: 2px dashed #ccc; padding: 20px; margin-top: 20px; text-align: center;">
       파일을 여기에 드롭하세요.
+    </div>
+    <!-- 디버깅 정보를 위한 영역 수정 -->
+    <div id="debug-info" style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; min-height: 100px; max-height: 200px; overflow-y: auto; font-family: monospace; white-space: pre-line;">
+      디버깅 정보가 여기에 표시됩니다.
     </div>
   </body>
 </html>

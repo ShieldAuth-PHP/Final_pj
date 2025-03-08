@@ -1,8 +1,18 @@
+// 디버그 메시지 출력 헬퍼 함수 추가
+function logDebug(message) {
+    const debugElem = document.getElementById("debug-info");
+    debugElem.textContent += message + "\n";
+}
+
 document.getElementById("scan").addEventListener("click", async function () {
   try {
+    logDebug('=== 웹 페이지 스캔 시작 ===');
+    
     // 현재 활성 탭의 정보를 가져옴
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab.id) return;
+    
+    logDebug('⚪ 활성 탭 ID: ' + tab.id);
 
     // active 탭에 스크립트 주입하여 페이지 정보를 추출
     const [{ result }] = await chrome.scripting.executeScript({
@@ -29,7 +39,21 @@ document.getElementById("scan").addEventListener("click", async function () {
     });
     
     const text = await response.text();
+    console.log('=== 웹 페이지 스캔 결과 ===');
+    logDebug('=== 웹 페이지 스캔 결과 ===');
+    console.log('⚪ 서버 응답 확인:', text ? 'O' : 'X');
+    logDebug('⚪ 서버 응답 확인: ' + (text ? 'O' : 'X'));
+    
     const data = text ? JSON.parse(text) : {};
+    console.log('⚪ JSON 파싱 성공:', Object.keys(data).length > 0 ? 'O' : 'X');
+    logDebug('⚪ JSON 파싱 성공: ' + (Object.keys(data).length > 0 ? 'O' : 'X'));
+    console.log('⚪ 스캔 결과:', {
+      '악성코드 감지': data.result === "malicious" ? 'O' : 'X',
+      '매칭된 YARA 룰': data.matches ? data.matches.join(", ") : '없음',
+      '스캔된 URL': result.url,
+      '스캔된 스크립트 수': result.scripts.length
+    });
+    logDebug('⚪ 스캔 결과: ' + (data.result === "malicious" ? '악성 감지' : '정상'));
     
     // YARA 룰과 연동되어 악성이 감지될 때만 alert 발생, 아니면 안전함을 알림
     if (data.result === "malicious") {
@@ -40,7 +64,8 @@ document.getElementById("scan").addEventListener("click", async function () {
     
   } catch (err) {
     console.error("스캔 중 오류 발생:", err);
-    alert("스캔 중 오류가 발생했습니다.");
+    logDebug("스캔 중 오류 발생: " + err.message);
+    alert("스캔 중 오류가 발생했습니다: " + err.message);
   }
 });
 
@@ -49,21 +74,24 @@ const dropZone = document.getElementById("drop-zone");
 
 dropZone.addEventListener("dragover", (e) => {
   e.preventDefault();
-  dropZone.style.backgroundColor = "#eef";
+  dropZone.style.backgroundColor = "#f0f0f0";
 });
 
 dropZone.addEventListener("dragleave", (e) => {
   e.preventDefault();
-  dropZone.style.backgroundColor = "";
+  dropZone.style.backgroundColor = "transparent";
 });
 
 dropZone.addEventListener("drop", async (e) => {
   e.preventDefault();
-  dropZone.style.backgroundColor = "";
-  const files = e.dataTransfer.files;
-  if (!files.length) return alert("파일이 감지되지 않았습니다.");
+  dropZone.style.backgroundColor = "transparent";
+  logDebug('=== 파일 스캔 시작 ===');
   
-  const file = files[0];
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  
+  logDebug('⚪ 파일명: ' + file.name);
+  
   const formData = new FormData();
   formData.append("file", file);
   
@@ -74,7 +102,30 @@ dropZone.addEventListener("drop", async (e) => {
     });
 
     const text = await response.text();
+    console.log('=== 파일 스캔 결과 ===');
+    logDebug('=== 파일 스캔 결과 ===');
+    console.log('⚪ 서버 응답 확인:', text ? 'O' : 'X');
+    logDebug('⚪ 서버 응답 확인: ' + (text ? 'O' : 'X'));
+    
     const data = text ? JSON.parse(text) : {};
+    console.log('⚪ JSON 파싱 성공:', Object.keys(data).length > 0 ? 'O' : 'X');
+    logDebug('⚪ JSON 파싱 성공: ' + (Object.keys(data).length > 0 ? 'O' : 'X'));
+    console.log('⚪ 스캔 결과:', {
+      '파일명': file.name,
+      '파일 크기': `${(file.size / 1024).toFixed(2)}KB`,
+      '악성코드 감지': data.result === "malicious" ? 'O' : 'X',
+      '매칭된 YARA 룰': data.matches ? data.matches.join(", ") : '없음'
+    });
+    logDebug('⚪ 스캔 결과 - ' + file.name + ': ' + (data.result === "malicious" ? '악성 감지' : '정상'));
+    
+    console.log('파일 스캔 서버 응답:', text);
+    
+    console.log('파일 스캔 결과:', {
+      파일명: file.name,
+      결과: data.result,
+      매칭된_룰: data.matches,
+      전체_데이터: data
+    });
     
     if (data.result === "malicious") {
       alert(`경고: ${file.name} 에서 악성 코드 감지됨!\n룰: ${data.matches.join(", ")}`);
@@ -83,6 +134,7 @@ dropZone.addEventListener("drop", async (e) => {
     }
   } catch (err) {
     console.error("파일 스캔 오류:", err);
-    alert("파일 스캔 중 오류가 발생했습니다.");
+    logDebug("파일 스캔 오류: " + err.message);
+    alert("파일 스캔 중 오류가 발생했습니다: " + err.message);
   }
 });
