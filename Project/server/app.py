@@ -62,24 +62,32 @@ def scan_file():
 def scan_page():
     url = request.form.get('url')
     html = request.form.get('html')
-    scripts = json.loads(request.form.get('scripts'))
+    scripts = json.loads(request.form.get('scripts', '[]'))
 
     # YARA 규칙으로 HTML 콘텐츠 검사
     matches = rules.match(data=html)
     
-    # 악성 스크립트 URL 패턴 검사
+    # 악성 스크립트 URL 패턴 검사 (예시)
     suspicious_patterns = [
         'suspicious-domain.com',
         'malware-site.com',
-        '.ru/',  # 예시 패턴
+        '.ru/',
     ]
     
     is_suspicious = any(pattern in url for pattern in suspicious_patterns)
     is_malicious = len(matches) > 0 or is_suspicious
 
+    # combined_rules.yar 파일의 내용을 읽어서 결과에 포함
+    try:
+        with open(RULES_FILEPATH, 'r', encoding='utf-8') as f:
+            rules_text = f.read()
+    except Exception as e:
+        rules_text = ""
+
     return jsonify({
         'result': 'malicious' if is_malicious else 'clean',
-        'matches': [str(match) for match in matches] if matches else []
+        'matches': [str(match) for match in matches] if matches else [],
+        'rules': rules_text
     })
 
 def auto_shutdown(delay=120):
