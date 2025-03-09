@@ -1,20 +1,29 @@
+// 스캔 목적으로 시작된 다운로드 ID를 저장하는 Set
+const scanningDownloads = new Set();
+
 chrome.downloads.onChanged.addListener((delta) => {
+  // 이미 스캔 목적으로 시작된 다운로드면 무시
+  if (scanningDownloads.has(delta.id)) return;
+
   if (delta.state && delta.state.current === "complete") {
     chrome.downloads.search({ id: delta.id }, (results) => {
       if (!results || !results.length) return;
       let item = results[0];
       let filename = item.filename.split(/[/\\]/).pop();
 
-      // Use download API to get file contents and send info to server
+      // 재다운로드를 시작하여 스캔 수행
       chrome.downloads.download({
         url: item.finalUrl || item.url,
         filename: filename,
         saveAs: false
       }, (downloadId) => {
+        // 재다운로드한 항목은 추후 다시 스캔하지 않도록 등록
+        scanningDownloads.add(downloadId);
+        
         let formData = new FormData();
         formData.append("filename", filename);
         formData.append("downloadId", downloadId);
-        formData.append("file_path", item.filename); // 전체 파일 경로 추가
+        formData.append("file_path", item.filename);
 
         fetch("http://localhost:5000/scan", {
           method: "POST",
@@ -29,9 +38,10 @@ chrome.downloads.onChanged.addListener((delta) => {
               title: "악성 파일 감지",
               message: `${filename} 파일이 악성으로 의심됩니다.\n즉시 삭제하시기를 권장드립니다!`,
             });
-            // 다운로드 기록에서 해당 항목 삭제
             chrome.downloads.erase({ id: downloadId });
           }
+          // 스캔 완료 후 필요 시 등록 해제 (검사 후 재스캔 가능하게 할지 결정)
+          // scanningDownloads.delete(downloadId);
         })
         .catch((err) => {
           console.error("파일 스캔 오류:", err);
@@ -41,6 +51,8 @@ chrome.downloads.onChanged.addListener((delta) => {
             title: "스캔 오류",
             message: "파일 검사 중 오류가 발생했습니다.",
           });
+          // 오류 발생시에도 등록 해제가 필요하면
+          // scanningDownloads.delete(downloadId);
         });
       });
     });
