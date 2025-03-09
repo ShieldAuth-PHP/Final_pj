@@ -138,3 +138,48 @@ dropZone.addEventListener("drop", async (e) => {
     alert("파일 스캔 중 오류가 발생했습니다: " + err.message);
   }
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+    // 통계 업데이트
+    updateStats();
+
+    // 버튼 이벤트 리스너
+    document.getElementById('scanPage').addEventListener('click', function() {
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            chrome.tabs.sendMessage(tabs[0].id, {action: "scanPage"});
+        });
+        
+        // 스캔 버튼 비활성화 및 로딩 표시
+        const button = document.getElementById('scanPage');
+        button.disabled = true;
+        button.textContent = "검사 중...";
+        
+        // 3초 후 버튼 복구 (실제로는 스캔 완료 이벤트에 따라 처리)
+        setTimeout(() => {
+            button.disabled = false;
+            button.textContent = "현재 페이지 검사";
+        }, 3000);
+    });
+
+    // 로그 보기 버튼
+    document.getElementById('viewLogs').addEventListener('click', function() {
+        chrome.tabs.create({url: 'logs.html'});
+    });
+});
+
+// 통계 업데이트 함수
+function updateStats() {
+    // Chrome storage에서 통계 데이터 가져오기
+    chrome.storage.local.get(['scannedFiles', 'detectedThreats'], function(result) {
+        document.getElementById('scanned-files').textContent = result.scannedFiles || 0;
+        document.getElementById('detected-threats').textContent = result.detectedThreats || 0;
+        
+        // 위협 발견 시 상태 표시 변경
+        const statusIndicator = document.querySelector('.status-indicator');
+        if (result.detectedThreats > 0) {
+            statusIndicator.classList.remove('safe');
+            statusIndicator.classList.add('warning');
+            statusIndicator.querySelector('.status-text').textContent = '보안 상태: 위협 감지됨';
+        }
+    });
+}

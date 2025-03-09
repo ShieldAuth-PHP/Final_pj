@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Malware Scanner</title>
+    <link rel="stylesheet" href="popup.css" />
+    <title>YARA Malware Detector</title>
     <script src="popup.js" defer></script>
     <style>
       body {
@@ -12,14 +13,37 @@
     </style>
   </head>
   <body>
-    <h2>Malware Scanner</h2>
-    <p>Status: <span id="status">Active</span></p>
-    <button id="scan">Scan Now</button>
-    <!-- 파일 드래그 앤 드랍 영역 추가 -->
+    <div class="container">
+      <div class="header">
+        <img src="icons/vaccine.png" alt="Logo" class="logo" />
+        <h1>YARA Malware Detector</h1>
+      </div>
+
+      <div class="status-section">
+        <div class="status-indicator safe">
+          <span class="status-text">보안 상태: 안전</span>
+        </div>
+      </div>
+
+      <div class="stats-section">
+        <div class="stat-item">
+          <span class="stat-label">검사한 파일</span>
+          <span class="stat-value" id="scanned-files">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">탐지된 위협</span>
+          <span class="stat-value" id="detected-threats">0</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="scanPage" class="action-button">현재 페이지 검사</button>
+        <button id="viewLogs" class="action-button secondary">로그 보기</button>
+      </div>
+    </div>
     <div id="drop-zone" style="border: 2px dashed #ccc; padding: 20px; margin-top: 20px; text-align: center;">
       파일을 여기에 드롭하세요.
     </div>
-    <!-- 디버깅 정보를 위한 영역 수정 -->
     <div id="debug-info" style="margin-top: 20px; padding: 10px; border: 1px solid #ddd; min-height: 100px; max-height: 200px; overflow-y: auto; font-family: monospace; white-space: pre-line;">
       디버깅 정보가 여기에 표시됩니다.
     </div>
