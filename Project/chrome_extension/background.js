@@ -71,8 +71,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       method: "POST",
       body: formData,
     })
-    .then((response) => response.json())
-    .then((data) => {
+    .then((response) => response.text()) // 응답을 text로 받아서
+    .then((text) => {
+      let data = {};
+      try {
+        data = text ? JSON.parse(text) : {};
+      } catch (e) {
+        console.error("JSON 파싱 에러:", e);
+      }
       if (data.result === "malicious") {
         chrome.notifications.create({
           type: "basic",
