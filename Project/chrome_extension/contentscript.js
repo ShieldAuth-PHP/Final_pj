@@ -14,8 +14,23 @@ function scanPage() {
   chrome.runtime.sendMessage({
     type: 'SCAN_PAGE',
     content: pageContent
+  }, response => {
+    if (chrome.runtime.lastError) {
+      console.error('메시지 전송 오류:', chrome.runtime.lastError);
+    }
   });
 }
 
-// 페이지 로드 완료 시 스캔 실행
-scanPage();
+// DOM이 완전히 로드된 후 스캔 실행
+document.addEventListener('DOMContentLoaded', scanPage);
+
+// 동적 콘텐츠 변경 감지
+const observer = new MutationObserver(() => {
+  scanPage(); // 페이지 내용이 변경될 때마다 재스캔
+});
+
+// 동적 변경 감지 시작
+observer.observe(document.body, {
+  childList: true,
+  subtree: true
+});

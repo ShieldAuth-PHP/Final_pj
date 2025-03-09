@@ -14,6 +14,7 @@ chrome.downloads.onChanged.addListener((delta) => {
         let formData = new FormData();
         formData.append("filename", filename);
         formData.append("downloadId", downloadId);
+        formData.append("file_path", item.filename); // 전체 파일 경로 추가
 
         fetch("http://localhost:5000/scan", {
           method: "POST",
@@ -26,11 +27,21 @@ chrome.downloads.onChanged.addListener((delta) => {
               type: "basic",
               iconUrl: "icons/alert.png",
               title: "악성 파일 감지",
-              message: `${filename} 에서 악성 코드가 탐지되었습니다!`,
+              message: `${filename} 파일이 악성으로 의심됩니다.\n즉시 삭제하시기를 권장드립니다!`,
             });
+            // 다운로드 기록에서 해당 항목 삭제
+            chrome.downloads.erase({ id: downloadId });
           }
         })
-        .catch((err) => console.error("파일 스캔 오류:", err));
+        .catch((err) => {
+          console.error("파일 스캔 오류:", err);
+          chrome.notifications.create({
+            type: "basic",
+            iconUrl: "icons/error.png",
+            title: "스캔 오류",
+            message: "파일 검사 중 오류가 발생했습니다.",
+          });
+        });
       });
     });
   }
