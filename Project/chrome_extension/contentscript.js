@@ -1,5 +1,28 @@
 console.log("Security Caution Popup!");
 
+const scanWorker = new Worker('worker.js');
+
+scanWorker.onmessage = function(e) {
+    if (e.data.success) {
+        try {
+            const data = JSON.parse(e.data.data);
+            if (data.result === "malicious") {
+                chrome.runtime.sendMessage({
+                    type: 'SHOW_NOTIFICATION',
+                    content: {
+                        title: "위험한 웹페이지 감지",
+                        message: "현재 페이지에서 잠재적인 위험이 감지되었습니다!"
+                    }
+                });
+            }
+        } catch (error) {
+            console.error("JSON 파싱 에러:", error);
+        }
+    } else {
+        console.error("스캔 작업 실패:", e.data.error);
+    }
+};
+
 function sendScanMessage(newElements = null) {
     let htmlContent, scriptUrls;
     if (Array.isArray(newElements) && newElements.length > 0) {
@@ -19,29 +42,13 @@ function sendScanMessage(newElements = null) {
         htmlContent = document.documentElement.outerHTML;
         scriptUrls = Array.from(document.querySelectorAll('script')).map(script => script.src);
     }
-    const message = {
-        type: 'SCAN_PAGE',
-        content: {
-            url: window.location.href,
-            html: htmlContent,
-            scripts: scriptUrls
-        }
-    };
-    try {
-        if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
-            chrome.runtime.sendMessage(message, (response) => {
-                if (chrome.runtime.lastError) {
-                    console.error("sendScanMessage error:", chrome.runtime.lastError.message);
-                    return;
-                }
-                // ... 응답 처리 ...
-            });
-        } else {
-            console.warn("chrome.runtime.sendMessage is not available.");
-        }
-    } catch (error) {
-        console.error("sendScanMessage exception:", error);
-    }
+
+    // 웹 워커에 스캔 작업 위임
+    scanWorker.postMessage({
+        url: window.location.href,
+        html: htmlContent,
+        scripts: scriptUrls
+    });
 }
 
 if (document.readyState === 'complete') {
