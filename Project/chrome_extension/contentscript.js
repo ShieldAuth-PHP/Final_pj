@@ -29,9 +29,15 @@ if (document.readyState === 'complete') {
     });
 }
 
+let debounceTimer; // 디바운스 타이머 변수 추가
+
 // 동적 콘텐츠 변경 감지
 const observer = new MutationObserver(() => {
-    sendScanMessage(); // 페이지 내용이 변경될 때마다 재스캔
+    // 디바운스 적용: 마지막 변경 후 500ms 이후에 sendScanMessage 실행
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+        sendScanMessage();
+    }, 500);
 });
 
 // 동적 변경 감지 시작
