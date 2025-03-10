@@ -91,3 +91,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     .catch((err) => console.error("페이지 스캔 오류:", err));
   }
 });
+
+// 메시지 리스너: 위협 감지 알림 전송
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'SHOW_NOTIFICATION') {
+        chrome.notifications.create({
+            type: 'basic',
+            iconUrl: 'icons/alert.png',
+            title: message.content.title,
+            message: message.content.message
+        });
+    }
+});
