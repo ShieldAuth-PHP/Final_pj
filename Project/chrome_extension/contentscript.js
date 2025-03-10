@@ -9,7 +9,21 @@ function sendScanMessage() {
             scripts: Array.from(document.querySelectorAll('script')).map(script => script.src)
         }
     };
-    chrome.runtime.sendMessage(message);
+    try {
+        if (chrome && chrome.runtime && chrome.runtime.sendMessage) {
+            chrome.runtime.sendMessage(message, (response) => {
+                if (chrome.runtime.lastError) {
+                    console.error("sendScanMessage error:", chrome.runtime.lastError.message);
+                    return;
+                }
+                // ... handle response if needed ...
+            });
+        } else {
+            console.warn("chrome.runtime.sendMessage is not available.");
+        }
+    } catch (error) {
+        console.error("sendScanMessage exception:", error);
+    }
 }
 
 if (document.readyState === 'complete') {
