@@ -34,5 +34,9 @@
   "icons": {
     "48": "icons/alert.png",
     "128": "icons/vaccine.png"
-  }
+  },
+  "web_accessible_resources": [{
+    "resources": ["worker.js"],
+    "matches": ["<all_urls>"]
+  }]
 }
