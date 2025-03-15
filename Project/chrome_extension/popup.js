@@ -9,6 +9,8 @@ document.getElementById("scan").addEventListener("click", function () {
 });
 
 chrome.runtime.onMessage.addListener((message) => {
+  console.log("📩 popup.js에서 메시지 수신:", message);
+
   if (message.action === "malware_detected") {
     document.getElementById("status").textContent = "⚠️ Malware Detected!";
     document.getElementById("status").style.color = "red";

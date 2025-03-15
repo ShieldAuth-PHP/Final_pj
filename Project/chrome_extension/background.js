@@ -68,6 +68,8 @@ chrome.webNavigation.onBeforeNavigate.addListener(
 );
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  console.log("📩 메시지 수신:", message);
+
   if (message.action === "manual_scan") {
     console.log("🔍 정밀 검사 실행 중...");
 
@@ -85,12 +87,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return;
       }
 
-      let activeTabId = tabs[0].id;
+      let activeTab = tabs[0];
+
+      // 🚨 activeTab.url이 undefined인 경우 대비
+      if (!activeTab.url) {
+        console.warn("⚠️ 활성 탭의 URL을 가져올 수 없습니다.");
+        return;
+      }
+
+      // ❌ chrome:// 페이지에서는 실행하지 않도록 예외 처리
+      if (activeTab.url.startsWith("chrome://")) {
+        console.warn(
+          "⚠️ chrome:// 페이지에서는 스크립트를 실행할 수 없습니다."
+        );
+        return;
+      }
 
       try {
         chrome.scripting
           .executeScript({
-            target: { tabId: activeTabId },
+            target: { tabId: activeTab.id },
             function: checkForMaliciousScripts,
           })
           .catch((err) => console.error("🚨 스크립트 실행 오류:", err));
@@ -104,41 +120,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     setTimeout(() => {
       chrome.runtime.sendMessage({ action: "scan_complete" });
     }, 3000);
+  } else if (message.action === "malware_detected") {
+    console.log("⚠️ 악성 코드 탐지됨.");
+    chrome.notifications.create({
+      type: "basic",
+      iconUrl: "icons/alert.png",
+      title: "⚠️ 악성 코드 감지",
+      message: "웹페이지에서 악성 코드가 탐지되었습니다!",
+    });
   }
+
+  return true; // sendResponse를 비동기적으로 사용할 수 있도록 처리
 });
-
-// Service Worker 종료 방지
-setInterval(() => {
-  console.log("🔄 Service Worker 유지 중...");
-}, 25000);
-
-function checkForMaliciousScripts() {
-  const maliciousKeywords = [
-    "atob(",
-    "eval(",
-    "document.write(",
-    "window.location=",
-  ];
-
-  document.querySelectorAll("script").forEach((script) => {
-    let scriptContent = script.innerText || script.textContent;
-
-    if (
-      scriptContent &&
-      maliciousKeywords.some((keyword) => scriptContent.includes(keyword))
-    ) {
-      console.warn("🚨 악성 코드 탐지:", scriptContent);
-      chrome.runtime.sendMessage({ action: "malicious_script_detected" });
-      script.remove();
-    }
-  });
-}
-
-function closeBrowser() {
-  chrome.tabs.query({}, (tabs) => {
-    for (let tab of tabs) {
-      chrome.tabs.remove(tab.id);
-    }
-  });
-  chrome.runtime.reload();
-}
