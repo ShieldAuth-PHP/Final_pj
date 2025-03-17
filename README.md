@@ -68,5 +68,7 @@ project/
 
 ## 🖥️ Demo
 
+Uploading 테스트 백신 동작.mov…
+
 ## 🤝 Contributing
 We welcome contributions! Feel free to open issues and submit pull requests.
