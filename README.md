@@ -1,6 +1,24 @@
-# Emotet / SocGholish / IcedID 최적화 Chrome Extension 백신 개발
+# 🧭 EpochScan: A Next-Gen Trojan Detection System
+**Detecting and neutralizing Emotet, SocGholish, and IcedID with AI-powered security.**
 
-## 프로젝트 구조
+## 📜 Our EpochScan ?
+EpochScan is an advanced security tool designed to **detect and mitigate Trojan malware**, specifically targeting *Emotet, SocGholish, and IcedID*. Developed by the **"History of Security"** team, this project integrates **machine learning, YARA rules, and real-time behavioral analysis** to provide next-generation protection against evolving cyber threats.
+
+## 🗃️ Features  
+🔗 **AI-Powered Malware Detection** – Scans executables using machine learning models  
+🔗 **Trojan-Specific Protection** – Focuses on detecting Emotet, SocGholish, and IcedID  
+🔗 **Real-Time File Execution Monitoring** – Prevents execution of malicious files  
+🔗 **Chrome Extension Integration** – Blocks suspicious downloads and URLs  
+🔗 **Flask-Based Scan API** – Local malware scanning with YARA rule validation
+
+## 🔧 Installation  
+### 1️⃣ **Clone the Repository**  
+```bash
+git clone https://github.com/YOUR-USERNAME/EpochScan.git
+cd EpochScan
+```
+
+## Directory
 
 ```
 project/
@@ -22,7 +40,7 @@ project/
 └── uploads/                 # 업로드된 파일 저장 디렉토리
 ```
 
-## 기능
+## Functions
 
 - 웹페이지의 악성 스크립트 실시간 탐지
 - 다운로드된 파일의 악성코드 검사
