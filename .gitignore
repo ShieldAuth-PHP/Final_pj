@@ -29,7 +29,7 @@ models/*
 !models/.gitkeep
 
 # Chrome 확장 프로그램 로컬 설정
-chrome_extension/monitor_host.json
+Project/chrome_extension/monitor_host.json
 
 # IDE 관련 파일
 .idea/
