@@ -68,7 +68,7 @@ project/
 
 ## 🖥️ Demo
 
-Uploading 테스트 백신 동작.mov…
+<https://github.com/user-attachments/assets/d1a836f0-d9c1-47fa-a771-80334b5db06d>
 
 ## 🤝 Contributing
 We welcome contributions! Feel free to open issues and submit pull requests.
