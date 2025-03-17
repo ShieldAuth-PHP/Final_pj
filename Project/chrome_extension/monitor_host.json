@@ -1,9 +1,0 @@
-{
-  "name": "com.example.monitor",
-  "description": "Chrome extension native messaging host for malware monitoring",
-  "path": "/Users/yesunglim/Final_pj/Project/chrome_extension/monitor.py", 
-  "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://mlgahegkjjchaeicllppaiaechconihk/"
-  ]
-}
