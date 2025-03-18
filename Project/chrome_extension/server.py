@@ -77,6 +77,80 @@ CORS(app)  # 크로스 오리진 요청 허용
 
 @app.route("/scan", methods=["POST"])
 def scan_file():
+    # JSON 요청 처리 부분 개선
+    if request.json:
+        action = request.json.get('action')
+        
+        if action == 'scan_recent_downloads':
+            # 기존 코드 유지
+            download_dir = os.path.expanduser("~/Downloads")
+            files = sorted(
+                [os.path.join(download_dir, f) for f in os.listdir(download_dir) if os.path.isfile(os.path.join(download_dir, f))],
+                key=os.path.getmtime,
+                reverse=True
+            )
+            
+            if files:
+                recent_file = files[0]
+                filename = os.path.basename(recent_file)
+                file_hash = hashlib.md5(open(recent_file, 'rb').read()).hexdigest()
+                
+                # YARA 스캔 수행
+                yara_results = []
+                prediction = "benign"
+                
+                if YARA_AVAILABLE and yara_scanner:
+                    yara_matches = yara_scanner.scan_file(recent_file)
+                    if yara_matches:
+                        prediction = "malicious"
+                        yara_results = [{"rule": match.rule, "meta": getattr(match, 'meta', {})} for match in yara_matches]
+                
+                return jsonify({
+                    "filename": filename,
+                    "file_hash": file_hash,
+                    "prediction": prediction,
+                    "yara_results": yara_results
+                })
+            
+            return jsonify({"prediction": "benign", "message": "최근 다운로드 파일 없음"})
+        
+        elif action == 'scan_file':
+            # 파일 경로로 스캔 요청을 받았을 때
+            filepath = request.json.get('filepath')
+            if not filepath:
+                return jsonify({"error": "파일 경로가 제공되지 않았습니다."}), 400
+                
+            # 가능하면 전체 경로 구성
+            if not os.path.isabs(filepath):
+                filepath = os.path.join(os.path.expanduser("~/Downloads"), os.path.basename(filepath))
+                
+            if not os.path.exists(filepath):
+                return jsonify({
+                    "prediction": "benign",
+                    "message": f"파일을 찾을 수 없음: {filepath}"
+                })
+                
+            filename = os.path.basename(filepath)
+            file_hash = hashlib.md5(open(filepath, 'rb').read()).hexdigest()
+            
+            # YARA 스캔 수행
+            yara_results = []
+            prediction = "benign"
+            
+            if YARA_AVAILABLE and yara_scanner:
+                yara_matches = yara_scanner.scan_file(filepath)
+                if yara_matches:
+                    prediction = "malicious"
+                    yara_results = [{"rule": match.rule, "meta": getattr(match, 'meta', {})} for match in yara_matches]
+            
+            return jsonify({
+                "filename": filename,
+                "file_hash": file_hash,
+                "prediction": prediction,
+                "yara_results": yara_results
+            })
+            
+    # 기존 코드 (파일 업로드 처리)...
     if "file" not in request.files and not request.json:
         return jsonify({"error": "파일이 없거나 스캔 요청이 잘못되었습니다"}), 400
 
@@ -112,6 +186,38 @@ def scan_file():
             "prediction": prediction,
             "yara_results": yara_results
         })
+    elif request.json and request.json.get('action') == 'scan_recent_downloads':
+        # 다운로드 폴더에서 가장 최근 파일 찾기
+        download_dir = os.path.expanduser("~/Downloads")
+        files = sorted(
+            [os.path.join(download_dir, f) for f in os.listdir(download_dir) if os.path.isfile(os.path.join(download_dir, f))],
+            key=os.path.getmtime,
+            reverse=True
+        )
+        
+        if files:
+            recent_file = files[0]
+            filename = os.path.basename(recent_file)
+            file_hash = hashlib.md5(open(recent_file, 'rb').read()).hexdigest()
+            
+            # YARA 스캔 수행
+            yara_results = []
+            prediction = "benign"
+            
+            if YARA_AVAILABLE and yara_scanner:
+                yara_matches = yara_scanner.scan_file(recent_file)
+                if yara_matches:
+                    prediction = "malicious"
+                    yara_results = [{"rule": match.rule, "meta": getattr(match, 'meta', {})} for match in yara_matches]
+            
+            return jsonify({
+                "filename": filename,
+                "file_hash": file_hash,
+                "prediction": prediction,
+                "yara_results": yara_results
+            })
+        
+        return jsonify({"prediction": "benign", "message": "최근 다운로드 파일 없음"})
     else:
         # 스캔 요청만 받은 경우 (파일 없음)
         return jsonify({"prediction": "benign", "message": "최근 다운로드 파일 없음"})

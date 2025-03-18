@@ -1,3 +1,13 @@
+// 스캔 결과 저장용 전역 변수
+let latestScanResult = {
+  filename: "",
+  prediction: "",
+  file_hash: "",
+  yara_results: [],
+  timestamp: "",
+  scan_status: "none" // none, scanning, complete, error
+};
+
 // 백그라운드에서 Python 스크립트 실행
 function startMonitorScript() {
   chrome.runtime.sendNativeMessage(
@@ -27,8 +37,16 @@ function scanDownloadedFile(downloadItem) {
   
   console.log("✅ 다운로드 완료, 스캔 시작:", downloadItem.filename);
   
-  // 로컬 파일에 접근할 수 없으므로 파일 경로를 서버로 전송
-  // Chrome 확장 프로그램은 보안상의 이유로 로컬 파일 시스템에 직접 접근할 수 없음
+  // 스캔 상태 업데이트
+  latestScanResult = {
+    filename: downloadItem.filename,
+    prediction: "",
+    file_hash: "",
+    yara_results: [],
+    timestamp: new Date().toISOString(),
+    scan_status: "scanning"
+  };
+  
   fetch("http://localhost:5000/scan", {
     method: "POST",
     body: JSON.stringify({
@@ -44,6 +62,17 @@ function scanDownloadedFile(downloadItem) {
   .then(data => {
     console.log("🔍 스캔 결과:", data);
     
+    // 스캔 결과 저장
+    latestScanResult = {
+      filename: downloadItem.filename,
+      prediction: data.prediction || "benign",
+      file_hash: data.file_hash || "",
+      yara_results: data.yara_results || [],
+      timestamp: new Date().toISOString(),
+      scan_status: "complete"
+    };
+    
+    // 스캔 결과에 따른 알림 생성
     if (data.prediction === "malicious") {
       chrome.notifications.create({
         type: "basic",
@@ -52,12 +81,7 @@ function scanDownloadedFile(downloadItem) {
         message: `파일 '${downloadItem.filename}'에서 악성코드가 발견되었습니다.`,
       });
       
-      // 이벤트 페이지나 팝업이 열려있을 때만 메시지 수신 가능
-      try {
-        chrome.runtime.sendMessage({ action: "malware_detected" });
-      } catch (error) {
-        console.log("메시지 전송 실패 (수신자 없음)");
-      }
+      safelySendMessage({ action: "malware_detected" });
     } else {
       chrome.notifications.create({
         type: "basic",
@@ -66,25 +90,28 @@ function scanDownloadedFile(downloadItem) {
         message: `파일 '${downloadItem.filename}'은 안전합니다.`,
       });
       
-      try {
-        chrome.runtime.sendMessage({ action: "scan_complete" });
-      } catch (error) {
-        console.log("메시지 전송 실패 (수신자 없음)");
-      }
+      safelySendMessage({ action: "scan_complete" });
     }
   })
   .catch(err => {
     console.error("파일 스캔 오류:", err);
-    try {
-      chrome.runtime.sendMessage({ action: "scan_error" });
-    } catch (error) {
-      console.log("메시지 전송 실패 (수신자 없음)");
-    }
+    latestScanResult.scan_status = "error";
+    safelySendMessage({ action: "scan_error" });
   });
 }
 
 // 파일 스캔 요청 처리 (수동 검사용)
 function scanFiles() {
+  // 스캔 상태 초기화
+  latestScanResult = {
+    filename: "최근 다운로드 파일",
+    prediction: "",
+    file_hash: "",
+    yara_results: [],
+    timestamp: new Date().toISOString(),
+    scan_status: "scanning"
+  };
+  
   fetch("http://localhost:5000/scan", {
     method: "POST",
     body: JSON.stringify({ action: "scan_recent_downloads" }),
@@ -92,40 +119,56 @@ function scanFiles() {
       "Content-Type": "application/json",
     },
   })
-    .then((response) => response.json())
-    .then((data) => {
-      console.log("🔍 스캔 결과:", data);
+  .then((response) => response.json())
+  .then((data) => {
+    console.log("🔍 스캔 결과:", data);
+    
+    latestScanResult = {
+      filename: data.filename || "최근 다운로드 파일",
+      prediction: data.prediction || "benign",
+      file_hash: data.file_hash || "",
+      yara_results: data.yara_results || [],
+      timestamp: new Date().toISOString(),
+      scan_status: "complete"
+    };
+    
+    if (data.prediction === "malicious") {
+      chrome.notifications.create({
+        type: "basic",
+        iconUrl: "icons/alert.png",
+        title: "악성코드 감지!",
+        message: `파일 '${latestScanResult.filename}'에서 악성코드가 발견되었습니다.`,
+      });
       
-      if (data.prediction === "malicious") {
-        chrome.notifications.create({
-          type: "basic",
-          iconUrl: "icons/alert.png",
-          title: "악성코드 감지!",
-          message: "파일에서 악성코드가 발견되었습니다.",
-        });
-        
-        chrome.runtime.sendMessage({ action: "malware_detected" });
-      } else {
-        chrome.notifications.create({
-          type: "basic",
-          iconUrl: "icons/vaccine.png",
-          title: "스캔 완료",
-          message: "검사한 모든 파일이 안전합니다.",
-        });
-        
-        chrome.runtime.sendMessage({ action: "scan_complete" });
-      }
-    })
-    .catch((err) => {
-      console.error("스캔 요청 오류:", err);
-      chrome.runtime.sendMessage({ action: "scan_error" });
-    });
+      safelySendMessage({ action: "malware_detected" });
+    } else {
+      chrome.notifications.create({
+        type: "basic",
+        iconUrl: "icons/vaccine.png",
+        title: "스캔 완료",
+        message: "검사한 모든 파일이 안전합니다.",
+      });
+      
+      safelySendMessage({ action: "scan_complete" });
+    }
+  })
+  .catch((err) => {
+    console.error("스캔 요청 오류:", err);
+    latestScanResult.scan_status = "error";
+    safelySendMessage({ action: "scan_error" });
+  });
 }
 
 // 메시지 리스너 등록 - 수정
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("📩 background.js에서 메시지 수신:", message);
 
+  if (message.action === "get_scan_report") {
+    // 항상 현재 저장된 결과를 반환
+    sendResponse(latestScanResult);
+    return true;
+  }
+  
   if (message.action === "manual_scan") {
     console.log("🔍 수동 스캔 요청 수신");
     scanFiles();
@@ -154,41 +197,53 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("🚀 확장 프로그램이 설치됨");
   startMonitorScript();
   
-  // 다운로드 이벤트 리스너 등록
-  chrome.downloads.onCreated.addListener(downloadItem => {
-    console.log("📥 다운로드 시작됨:", downloadItem.filename);
-  });
-  
-  // 다운로드 완료 시 스캔 실행
-  chrome.downloads.onChanged.addListener(downloadDelta => {
-    if (downloadDelta.state && downloadDelta.state.current === 'complete') {
-      chrome.downloads.search({id: downloadDelta.id}, results => {
-        if (results && results.length > 0) {
-          scanDownloadedFile(results[0]);
-        }
+  // 기존 규칙 정리 후 새로운 규칙 추가
+  chrome.declarativeNetRequest.getDynamicRules((existingRules) => {
+    const existingRuleIds = existingRules.map(rule => rule.id);
+    
+    if (existingRuleIds.length > 0) {
+      // 기존 규칙 삭제
+      chrome.declarativeNetRequest.updateDynamicRules({
+        removeRuleIds: existingRuleIds,
+        addRules: [] // 먼저 모든 규칙 삭제
+      }, () => {
+        // 그 후 새로운 규칙 추가
+        loadAndApplyRules();
       });
+    } else {
+      // 기존 규칙이 없으면 바로 새 규칙 추가
+      loadAndApplyRules();
     }
   });
   
-  // 차단 규칙 로드 - 기존 규칙 제거 후 새 규칙 추가
+  // 다운로드 이벤트 리스너 및 기타 코드는 그대로 유지
+});
+
+// 규칙 로드 및 적용 함수
+function loadAndApplyRules() {
   fetch("rules.json")
     .then((response) => response.json())
     .then((rules) => {
-      chrome.declarativeNetRequest.getDynamicRules((existingRules) => {
-        let existingRuleIds = existingRules.map(rule => rule.id);
-        chrome.declarativeNetRequest.updateDynamicRules({
-          removeRuleIds: existingRuleIds,
-          addRules: rules
-        }, () => {
-          if (chrome.runtime.lastError) {
-            console.error("규칙 업데이트 오류:", chrome.runtime.lastError.message);
-          } else {
-            console.log("규칙 업데이트 완료");
-          }
-        });
+      chrome.declarativeNetRequest.updateDynamicRules({
+        addRules: rules
+      }, () => {
+        if (chrome.runtime.lastError) {
+          console.error("규칙 업데이트 오류:", chrome.runtime.lastError.message);
+        } else {
+          console.log("규칙 업데이트 완료");
+        }
       });
     })
     .catch((error) => {
       console.error("규칙 로드 오류:", error);
     });
-});
+}
+
+// 안전하게 메시지 전송하는 함수
+function safelySendMessage(message) {
+  try {
+    chrome.runtime.sendMessage(message);
+  } catch (error) {
+    console.log("메시지 전송 실패 (수신자 없음)");
+  }
+}
