@@ -75,7 +75,6 @@ chrome.runtime.onInstalled.addListener(() => {
   startMonitorScript();
   
   // 차단 규칙 로드 - 현재 비활성화
-  /*
   fetch("rules.json")
     .then((response) => response.json())
     .then((rules) => {
@@ -86,5 +85,4 @@ chrome.runtime.onInstalled.addListener(() => {
     .catch((error) => {
       console.error("규칙 로드 오류:", error);
     });
-    */
 });

@@ -4,19 +4,73 @@ import os
 import hashlib
 import tempfile
 
-# malware_detector.py에서 함수 불러오기
-"""
 try:
-    from malware_detector import predict_malware
+    import yara
+    YARA_AVAILABLE = True
 except ImportError:
-    # 모델이 없으면 간단한 함수로 대체
-    def predict_malware(file_path_or_content):
-        return "benign"  # 실제 환경에서는 모델로 예측해야 함
-"""
+    YARA_AVAILABLE = False
+    print("⚠️ yara-python 모듈을 찾을 수 없습니다. YARA 스캐닝이 비활성화됩니다.")
 
-# 항상 기본 함수 사용
+# YARA 스캐너 클래스 정의
+class YaraScanner:
+    def __init__(self, rules_directory):
+        """YARA 스캐너 초기화"""
+        self.rules = None
+        self.rules_directory = rules_directory
+        self.compile_rules()
+        
+    def compile_rules(self):
+        """YARA 규칙 컴파일"""
+        if not YARA_AVAILABLE:
+            print("YARA 모듈이 설치되지 않아 규칙을 컴파일할 수 없습니다.")
+            return
+            
+        try:
+            filepaths = {}
+            # 디렉토리에서 모든 .yar 파일 찾기
+            if os.path.exists(self.rules_directory):
+                for filename in os.listdir(self.rules_directory):
+                    if filename.endswith('.yar'):
+                        file_path = os.path.join(self.rules_directory, filename)
+                        filepaths[filename] = file_path
+                
+                if filepaths:
+                    self.rules = yara.compile(filepaths=filepaths)
+                    print(f"YARA 규칙 컴파일 완료. 로드된 파일: {', '.join(filepaths.keys())}")
+                else:
+                    print(f"디렉토리 {self.rules_directory}에서 YARA 규칙 파일을 찾을 수 없습니다.")
+            else:
+                print(f"YARA 규칙 디렉토리가 존재하지 않습니다: {self.rules_directory}")
+        except Exception as e:
+            print(f"YARA 규칙 컴파일 실패: {str(e)}")
+            self.rules = None
+    
+    def scan_file(self, file_path):
+        """파일을 스캔하여 YARA 규칙과 일치하는지 확인"""
+        if not YARA_AVAILABLE or not self.rules:
+            print("YARA 스캔을 수행할 수 없습니다.")
+            return []
+            
+        try:
+            matches = self.rules.match(file_path)
+            if matches:
+                match_names = [match.rule for match in matches]
+                print(f"파일 {file_path}에서 다음 규칙 일치: {', '.join(match_names)}")
+            return matches
+        except Exception as e:
+            print(f"파일 {file_path} 스캔 중 오류 발생: {str(e)}")
+            return []
+
+# 간단한 악성코드 예측 함수 (실제 모델 없이)
 def predict_malware(file_path_or_content):
-    return "benign"  # AI 모델 없이 항상 안전하다고 응답
+    return "benign"  # 기본값으로 안전하다고 판단
+
+# 현재 디렉토리 기준 상대 경로
+current_dir = os.path.dirname(os.path.abspath(__file__))
+YARA_RULES_DIR = os.path.join(current_dir, "rules", "yara")
+
+# YARA 스캐너 초기화 (있는 경우에만)
+yara_scanner = YaraScanner(YARA_RULES_DIR) if YARA_AVAILABLE else None
 
 app = Flask(__name__)
 CORS(app)  # 크로스 오리진 요청 허용
@@ -35,13 +89,28 @@ def scan_file():
         # 간단한 해시 값 계산
         file_hash = hashlib.md5(open(file_path, 'rb').read()).hexdigest()
 
-        # 여기서 실제 파일 분석 진행
-        prediction = predict_malware(file_path)
+        # YARA 스캔 수행 (가능한 경우)
+        yara_results = []
+        prediction = "benign"
+        
+        if YARA_AVAILABLE and yara_scanner:
+            yara_matches = yara_scanner.scan_file(file_path)
+            if yara_matches:
+                # YARA 매치가 있으면 악성으로 판단
+                prediction = "malicious"
+                yara_results = [{"rule": match.rule, "meta": getattr(match, 'meta', {})} for match in yara_matches]
+            else:
+                # YARA 매치가 없으면 기본 함수로 예측
+                prediction = predict_malware(file_path)
+        else:
+            # YARA가 없으면 기본 함수로만 예측
+            prediction = predict_malware(file_path)
         
         return jsonify({
             "filename": uploaded_file.filename,
             "file_hash": file_hash,
-            "prediction": prediction
+            "prediction": prediction,
+            "yara_results": yara_results
         })
     else:
         # 스캔 요청만 받은 경우 (파일 없음)
