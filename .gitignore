@@ -12,6 +12,7 @@ __pycache__/
 .eggs/
 *.egg-info/
 *.egg
+_metadata/
 
 # 로그 파일
 *.log
